@@ -819,7 +819,7 @@ df1 <- df %>%
 
 **2. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).**
 
-We plot using ggplot as well as lattice package (just for fun).
+We plot using ggplot package.
 
 
 ```r
@@ -835,12 +835,3 @@ ggplot(df2, aes(x = interval, y = steps)) +
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
-
-```r
-library(lattice)
-xyplot(df2$steps ~ df2$interval | df2$weekDay_End, 
-       layout = c(1, 2), type = "l", 
-       xlab = "Interval", ylab = "Number of steps")
-```
-
-![](PA1_template_files/figure-html/unnamed-chunk-15-2.png)<!-- -->
