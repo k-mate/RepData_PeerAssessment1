@@ -5,21 +5,160 @@ output:
     keep_md: true
 ---
 
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
 
 ## Loading and preprocessing the data
 
+```{r}
+library(dplyr)
+# Download the dataset in /data directory (Check if directory already exists)
+
+if(!file.exists("./data")){dir.create("./data")}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(fileUrl,destfile="./data/Dataset.zip")
+
+# Unzip dataSet to /data directory
+unzip(zipfile="./data/Dataset.zip",exdir="./data")
+```
+
+
+**1. Load the data (i.e. read.csv())**
+
+```{r}
+df <- read.csv("data/activity.csv") 
+```
+
+**2. Process/transform the data (if necessary) into a format suitable for your analysis**
+
+```{r}
+df <- df %>%  
+  mutate(date = as.Date(date))
+```
 
 
 ## What is mean total number of steps taken per day?
 
+**1. Make a histogram of the total number of steps taken each day**
 
+```{r}
+df1 <- df %>% 
+  group_by(date) %>% 
+  summarise(steps = sum(steps, na.rm = T))
+
+hist(df1$steps, main = "Histogram of total number of steps taken each day", xlab = "Number of steps")
+
+```
+
+**2. Calculate and report the mean and median total number of steps taken per day**
+
+
+```{r}
+library(kableExtra)
+df1 <- df %>% 
+  group_by(date) %>% 
+  summarise(Mean = mean(steps, na.rm = TRUE), Median = median(steps, na.rm = TRUE))
+
+kable(df1, digits = 1) %>%
+  kable_styling("striped", full_width = F)
+
+```
 
 ## What is the average daily activity pattern?
 
+**1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)**
+
+```{r}
+df1 <- df %>% 
+  group_by(interval) %>% 
+  summarise(steps = mean(steps, na.rm = T))
+
+with(df1, plot(interval, steps, type = "l"))
+
+```
+
+**2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?**
+
+
+```{r}
+df1$interval[which.max(df1$steps)]
+
+```
 
 
 ## Imputing missing values
 
+**1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with `NA` s)**
 
+```{r}
+mean(is.na(df$steps))
+```
+
+**2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.**
+
+```{r}
+meanvalInterval <- with(df, ave(steps, interval, FUN = function(x) mean(x, na.rm = TRUE)))
+```
+
+**3. Create a new dataset that is equal to the original dataset but with the missing data filled in.**
+
+```{r}
+df1 <- df
+df1$steps[is.na(df1$steps)] <- meanvalInterval[is.na(df1$steps)]
+head(df1)
+tail(df1)
+```
+
+**4. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?**
+
+```{r}
+df1 <- df1 %>% 
+  group_by(date) %>% 
+  summarise(steps = sum(steps, na.rm = T))
+
+hist(df1$steps, xlab = "Number of Steps", main = "Histogram of number of steps taken each day")
+
+```
+
+```{r}
+df1 <- df1 %>% 
+  group_by(date) %>% 
+  summarise(Mean = mean(steps, na.rm = TRUE), Median = median(steps, na.rm = TRUE))
+
+kable(df1, digits = 1) %>%
+  kable_styling("striped", full_width = F)
+
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+**1. Create a new factor variable in the dataset with two levels -- "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.**
+
+
+```{r}
+df1 <- df %>% 
+  mutate(weekDay_End = ifelse(weekdays(date) %in% c("Sunday", "Saturday"), "Weekend", "Weekday")) 
+```
+
+**2. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).**
+
+We plot using ggplot as well as lattice package (just for fun).
+
+```{r}
+df2 <- df1 %>% 
+  group_by(interval, weekDay_End) %>% 
+  summarise(steps = mean(steps, na.rm = T))
+
+library(ggplot2)
+ggplot(df2, aes(x = interval, y = steps)) + 
+  geom_line() +
+  facet_grid(facets = vars(weekDay_End)) +
+  theme_bw()
+
+library(lattice)
+xyplot(df2$steps ~ df2$interval | df2$weekDay_End, 
+       layout = c(1, 2), type = "l", 
+       xlab = "Interval", ylab = "Number of steps")
+
+```
